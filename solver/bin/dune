@@ -1,0 +1,12 @@
+;bin/dune
+(ocamllex lexer)
+(menhir
+  (modules parser))
+
+(executable
+ (public_name solver)
+ (name main)
+ (modules main lexer parser)
+ (libraries solver))
+
+

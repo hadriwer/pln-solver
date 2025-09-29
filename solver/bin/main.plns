@@ -1,0 +1,4 @@
+Obj : 
+    min z = 3x + 2y
+Constraints :
+    6x + 2y <= 9
