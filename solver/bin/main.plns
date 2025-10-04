@@ -1,4 +1,9 @@
 Obj : 
     min z = 3x + 2y
-Constraints :
+Cons :
     6x + 2y <= 9
+    6x + 2y >= 9
+    9 <= 3x + 2y
+    x <= 2
+    6*x + y*2 + z*4 >= 1
+    6x + 2y <= 1

@@ -7,7 +7,7 @@ let cons = ['c''C']['o''O']['n''N']['s''S']
 let obj = ['o''O']['b''B']['j''J']
 let max = ['m''M']['a''A']['x''X']
 let min = ['m''M']['i''I']['n''N']
-let id = ['a'-'Z']['a'-'Z''0'-'9']*
+let id = ['a'-'z''A'-'Z']['a'-'z''A'-'Z''0'-'9']*
 
 rule token = parse
     |   obj                         { OBJ }
@@ -16,14 +16,19 @@ rule token = parse
     |   max                         { MAX }
     |   min                         { MIN }
 
+    |   "+"                         { PLUS }
+    |   "-"                         { MOINS }
+    |   "*"                         { FOIS }
+
     |   ":"                         { COLON }
     |   "="                         { EQ }
-    |   "+"                         { PLUS }
     |   "<="                        { LEQ }
     |   ">="                        { GEQ }
 
-    |   digit+                      { INT }
-    |   id                          { ID }
+    |   digit+ as n                 { INT (int_of_string n) }
+    |   id as c                     { ID (c)}
 
+    |   '\n'                        { Lexing.new_line lexbuf; token lexbuf }
+    |   ['\t'' ']                   { token lexbuf }
     |   eof                         { EOF }
-    |   _   as c                    { token lexbuf }
+    |   _   as c                    { Printf.eprintf "Unexpected char : %c\n" c ; token lexbuf }
