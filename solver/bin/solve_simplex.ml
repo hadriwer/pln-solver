@@ -9,8 +9,8 @@ let cmp_min = fun a b -> a < b;;
   @param  l   list
   @return list without the n last element
 **)
-let rem_last n (t : 'a array) =
-  Array.sub t 0 (n+1)
+let rem_last n (t : 'a array) width =
+  Array.sub t 0 (width-n)
 ;;
 
 (**
@@ -53,7 +53,7 @@ let print_mat m =
 **)
 let find_arg_coeff_pivot (t : float array array) height width =
   let objective_line = t.(height-1) in
-  let col = arg_extreme cmp_max (rem_last 1 objective_line) in
+  let col = arg_extreme cmp_max (rem_last 1 objective_line width) in
   let rec aux i best_i best_val =
     if i >= height - 1 then best_i
     else
@@ -78,10 +78,10 @@ let find_arg_coeff_pivot (t : float array array) height width =
 **)
 let rec simplex tab height width =
   print_mat tab;
-  let objective_line_without_last = tab.(height-1) |> rem_last 1 in
+  let objective_line_without_last = (tab.(height-1) |> rem_last 1) width in
   let tf = Array.exists (fun e -> e > 1e-10) objective_line_without_last in
   if not tf
-  then tab.(height-1).(width-1)
+  then (Printf.printf "true\n"; tab.(height-1).(width-1))
   else
     let (x,y) = find_arg_coeff_pivot tab height width in
     Printf.printf "(%d, %d)\n" x y;
