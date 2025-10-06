@@ -1,3 +1,6 @@
+%{
+        open Ast
+%}
 %token
 COLON EQ GEQ LEQ 
 PLUS MOINS FOIS
@@ -5,64 +8,68 @@ CONS OBJ
 EOF
 MIN MAX
 
-%token<int> INT
+%token<float> INT
 %token<string> ID
 
-%type <string list>
-beg constraints exp minmax inequalities inequality terme
+%type <tree> beg
+%type <constr> constraints inequalities
+%type <expr> exp inequality terme
+%type <optimum> minmax
 
-%start <unit> main
+%start <tree> main
 %%
 
 main:
 |   beg EOF
-        { List.iter print_endline $1}
+        { $1}
 
 beg:
 |   OBJ COLON minmax ID EQ exp constraints
-        { "objective" :: $3 @ $6 @ $7 }
+        { OBJ ($3, EXPR (ID($4), COMP_EQ, $6), $7) }
 
 constraints:
 |   CONS COLON inequalities
-        { "Constraints" :: $3 }
+        { $3 }
 
 inequalities:
 |   /* empty */
-        { [] }
+        { NOP }
 |   inequality inequalities
-        { $1 @ $2 }
+        { CONSTR ($1, $2) }
 
 inequality:
-|   exp GEQ INT
-        { $1 }
-|   exp LEQ INT
-        { $1 }
-|   INT LEQ exp
-        { $3 }
-|   INT GEQ exp
-        { $3 }
+|   exp conmparaison INT
+        { EXPR ($1, $2, INT($3)) }
+|   INT conmparaison exp
+        { EXPR ($3, $2, INT($1)) }
+
+conmparaison:
+|       GEQ
+        { COMP_GE }
+|       LEQ
+        { COMP_LE }
 
 minmax:
 |   MIN
-        { ["min"] }
+        { MIN }
 |   MAX
-        { ["max"] }
+        { MAX }
 
 exp:
 |   exp PLUS terme
-        { $1 @ ("plus" :: $3)}
+        { BINOP (OP_ADD, $1, $3) }
 |   exp MOINS terme
-        { $1 @ ("moins" :: $3) }
+        { BINOP (OP_SUB, $1, $3) }
 |   terme
         { $1 }
 
 terme:
 |   ID
-        { ["ID("^$1^")"] }
+        { BINOP (OP_MUL, INT(1.), ID($1)) }
 |   INT ID
-        { ["INT("^(string_of_int $1)^") * ID("^$2^")"] }
+        { BINOP (OP_MUL, INT($1), ID($2)) }
 |   INT FOIS ID
-        { ["INT("^(string_of_int $1)^") * ID("^$3^")"] }
+        { BINOP (OP_MUL, INT($1), ID($3)) }
 |   ID FOIS INT
-        { ["INT("^(string_of_int $3)^") * ID("^$1^")"] }
+        { BINOP (OP_MUL, INT($3), ID($1)) }
 

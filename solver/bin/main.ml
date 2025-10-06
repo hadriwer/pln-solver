@@ -1,4 +1,5 @@
 open Solve_simplex
+open Ast
 let path : string = "bin/main.plns";;
 let mat =[|
   [|2.; 3.; 2.; 1.; 0.; 0.; 90.|];
@@ -11,7 +12,8 @@ let () =
   let ic = open_in path in
   let lexbuf = Lexing.from_channel ic in
   try
-    Parser.main Lexer.token lexbuf;
+    let tree = Parser.main Lexer.token lexbuf in
+    print_ast tree;
     print_endline "OK";
     solve_simplex mat;
   with

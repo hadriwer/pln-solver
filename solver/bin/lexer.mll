@@ -25,7 +25,7 @@ rule token = parse
     |   "<="                        { LEQ }
     |   ">="                        { GEQ }
 
-    |   digit+ as n                 { INT (int_of_string n) }
+    |   digit+ as n                 { INT (float_of_string n) }
     |   id as c                     { ID (c)}
 
     |   '\n'                        { Lexing.new_line lexbuf; token lexbuf }

@@ -6,7 +6,7 @@
 (executable
  (public_name solver)
  (name main)
- (modules main lexer parser solve_simplex)
+ (modules main lexer parser solve_simplex ast)
  (libraries solver))
 
 
