@@ -77,14 +77,14 @@ let find_arg_coeff_pivot (t : float array array) height width =
     @return solve the pln problem
 **)
 let rec simplex tab height width =
-  print_mat tab;
+  (* print_mat tab; *)
   let objective_line_without_last = (tab.(height-1) |> rem_last 1) width in
   let tf = Array.exists (fun e -> e > 1e-10) objective_line_without_last in
   if not tf
-  then (Printf.printf "true\n"; tab.(height-1).(width-1))
+  then (tab.(height-1).(width-1))
   else
     let (x,y) = find_arg_coeff_pivot tab height width in
-    Printf.printf "(%d, %d)\n" x y;
+    (* Printf.printf "(%d, %d)\n" x y; *)
     let curr = tab.(x).(y) in
     let tab_x = Array.map (fun e -> e /. curr) tab.(x) in
     let res =
@@ -105,4 +105,4 @@ let solve_simplex (t : float array array) =
   let height = length2 t in
   let width = length t.(0) in
   let res = simplex t height width in
-  Printf.printf "Optimum found for expression on %f\n" res;
+  res

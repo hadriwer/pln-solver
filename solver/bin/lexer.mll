@@ -20,10 +20,9 @@ rule token = parse
     |   "-"                         { MOINS }
     |   "*"                         { FOIS }
 
-    |   ":"                         { COLON }
     |   "="                         { EQ }
-    |   "<="                        { LEQ }
-    |   ">="                        { GEQ }
+    |   "<="    |   "=<"            { LEQ }
+    |   ">="    |   "=>"            { GEQ }                   
 
     |   digit+ as n                 { INT (float_of_string n) }
     |   id as c                     { ID (c)}
@@ -31,4 +30,4 @@ rule token = parse
     |   '\n'                        { Lexing.new_line lexbuf; token lexbuf }
     |   ['\t'' ']                   { token lexbuf }
     |   eof                         { EOF }
-    |   _   as c                    { Printf.eprintf "Unexpected char : %c\n" c ; token lexbuf }
+    |   _   as c                    { Printf.eprintf "Unexpected char : \"%c\"\n" c ; token lexbuf }

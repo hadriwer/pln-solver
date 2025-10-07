@@ -2,7 +2,7 @@
         open Ast
 %}
 %token
-COLON EQ GEQ LEQ 
+EQ GEQ LEQ 
 PLUS MOINS FOIS
 CONS OBJ
 EOF
@@ -24,12 +24,16 @@ main:
         { $1}
 
 beg:
-|   OBJ COLON minmax ID EQ exp constraints
-        { OBJ ($3, EXPR (ID($4), COMP_EQ, $6), $7) }
+|   OBJ minmax exp_optimize constraints
+        { OBJ ($2, $3, $4) }
+
+exp_optimize:
+|   ID EQ exp
+        { EXPR (ID($1), COMP_EQ, $3) }
 
 constraints:
-|   CONS COLON inequalities
-        { $3 }
+|   CONS inequalities
+        { $2 }
 
 inequalities:
 |   /* empty */
@@ -72,4 +76,3 @@ terme:
         { BINOP (OP_MUL, INT($1), ID($3)) }
 |   ID FOIS INT
         { BINOP (OP_MUL, INT($3), ID($1)) }
-

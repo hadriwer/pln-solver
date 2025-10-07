@@ -1,4 +1,4 @@
-Obj : 
-    min z = 3x + 2y
-Cons :
-    6x + 2y <= 9
+OBJ MIN Z = 2x + 3y
+CONS
+x + y >= 10
+2x + y >= 15

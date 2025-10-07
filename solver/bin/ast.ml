@@ -108,3 +108,111 @@ let print_ast t =
   in
   print_tree 0 t;
 ;;
+
+
+let cnt_number_variable t =
+  let rec aux exp =
+    match exp with
+      | NONE -> ("", 0)
+      | INT _ -> ("", 0)
+      | ID x -> (x, 1)
+      | BINOP (_, e1, e2) -> ("", snd (aux e1) + snd (aux e2))
+      | EXPR (e1, _, e2) -> 
+          let e1 = aux e1 in
+          (fst e1, snd e1 + snd (aux e2))
+      
+  in
+  match t with
+    OBJ (_, e, _) -> aux e
+;;
+
+let cnt_number_constr t =
+  let rec aux c =
+    match c with
+        NOP -> 0
+      | CONSTR (_, c1) -> 1 + aux c1
+  in
+  match t with
+    OBJ (_, _, c) ->
+      let res = aux c in
+      if res = 0 then failwith "No constraint" else res
+    ;;
+    
+let make_simplex_table tree  =
+  (*===================================================================*)
+  (* Var to optimize and number variables int the problems *)
+  let (var_opti, n_var) = cnt_number_variable tree in
+  (* Number of constraints in the problem *)
+  let n_cons = cnt_number_constr tree in
+  Printf.printf "Var to optimize = %s, Number var = %d, Number of contraint = %d\n" var_opti n_var n_cons;
+
+  (*===================================================================*)
+  (* Create a Hashtbl to store var *)
+  let tbl = Hashtbl.create n_var in
+  (* Length = number of contraints + 1 (for the objective line) *)
+  let idx = ref 0 in
+  let register_var x =
+    if not (Hashtbl.mem tbl x) then (
+      Hashtbl.add tbl x !idx;
+      incr idx
+    )
+  in
+
+  let get_idx x =
+    if not (Hashtbl.mem tbl x) then failwith "Semantic error : var isn't in the objective"
+    else Hashtbl.find tbl x
+  in
+
+  (*===================================================================*)
+  let n_cols = 2 * (n_var - 1) + 1 in
+  let table = Array.make_matrix (n_cons + 1) (n_cols) 0. in
+
+  let rec fill_tbl = function
+      | NONE -> ()
+      | INT _ -> ()
+      | ID x -> register_var x;
+      | BINOP (_, e1, e2) -> (fill_tbl e1; fill_tbl e2)
+      | EXPR (_, _, e2) -> 
+        (
+          fill_tbl e2;
+        )
+  in
+  let rec fill_expr row = function
+      | NONE -> ()
+      | BINOP (_, INT(a), ID(x))
+      | BINOP (_, ID(x), INT(a)) ->
+        (
+          let idx = get_idx x in
+          table.(row).(idx) <- a;
+          
+          )
+      | BINOP (_, e1, e2) -> (fill_expr row e1; fill_expr row e2) 
+      | EXPR (e1, _, INT(i))
+      | EXPR (INT(i), _, e1) ->
+        (
+          table.(row).(n_cols - 1) <- i;
+          fill_expr row e1;
+        )
+      | EXPR (_, _, e) ->
+        (
+          fill_expr row e;
+        )
+      | _ -> ()
+  in
+  let rec fill_constr row = function
+        NOP -> ()
+      | CONSTR (e, c1) -> fill_expr row e; fill_constr (row+1) c1
+  in
+  match tree with
+    OBJ (_, e, c) -> (
+      fill_tbl e;
+      fill_expr n_cons e;
+      fill_constr 0 c;
+      (* Set the identity matrix *)
+      let nb_var_mat = n_var - 1 in
+      for i = 0 to  nb_var_mat - 1 do
+        table.(i).(i + nb_var_mat) <- 1.;
+      done;
+      (var_opti, table, tbl)
+    )
+;;
