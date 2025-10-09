@@ -1,7 +1,5 @@
 let length = Array.fold_left (fun acc _ -> 1 + acc) 0;;
 let length2 (l : 'a array array) = Array.fold_left (fun acc _ -> 1 + acc) 0 l;;
-let cmp_max = fun a b -> a > b;;
-let cmp_min = fun a b -> a < b;;
 
 (**
   Function that return a shorter list
@@ -38,10 +36,12 @@ let arg_extreme cmp (t : 'a array) =
 **)
 let print_mat m =
   let print_list l =
-    Array.iter (fun e -> Printf.printf "%f " e) l;
+    Array.iter (fun e -> 
+      let padding = if e < 0. then "" else " " in
+      Printf.printf "%s%-4f " padding e) l;
     print_endline ""
   in
-  Array.iter print_list m
+  Array.iter print_list m;
 ;;
 
 (**
@@ -51,9 +51,9 @@ let print_mat m =
     @param width of the matrix
     @return return coord of the shift point
 **)
-let find_arg_coeff_pivot (t : float array array) height width =
+let find_arg_coeff_pivot n_var (t : float array array) height width =
   let objective_line = t.(height-1) in
-  let col = arg_extreme cmp_max (rem_last 1 objective_line width) in
+  let col = arg_extreme (fun a b -> a > b) (Array.sub objective_line 0 n_var) in
   let rec aux i best_i best_val =
     if i >= height - 1 then best_i
     else
@@ -76,15 +76,15 @@ let find_arg_coeff_pivot (t : float array array) height width =
     @param width of the matrix
     @return solve the pln problem
 **)
-let rec simplex tab height width =
-  (* print_mat tab; *)
-  let objective_line_without_last = (tab.(height-1) |> rem_last 1) width in
-  let tf = Array.exists (fun e -> e > 1e-10) objective_line_without_last in
+let rec simplex (p : float array -> bool) n_var tab height width =
+  let objective_line_without_last = Array.sub tab.(height-1) 0 (n_var-1) in
+  print_mat tab;
+  let tf = p objective_line_without_last in
   if not tf
-  then (tab.(height-1).(width-1))
+    then (tab.(height-1).(width-1))
   else
-    let (x,y) = find_arg_coeff_pivot tab height width in
-    (* Printf.printf "(%d, %d)\n" x y; *)
+    let (x,y) = find_arg_coeff_pivot n_var tab height width in
+    Printf.printf "pivot = (%d, %d)\n\n" x y;
     let curr = tab.(x).(y) in
     let tab_x = Array.map (fun e -> e /. curr) tab.(x) in
     let res =
@@ -94,15 +94,15 @@ let rec simplex tab height width =
           Array.init width (fun j ->
             tab.(i).(j) -. tab.(i).(y) *. tab_x.(j)))
     in
-    simplex res height width
+    simplex p n_var res height width
 
 
 (**
     Function that launch the simplex
     @param t matrix of constraints and objective
 **)
-let solve_simplex (t : float array array) =
+let solve_simplex p n_var (t : float array array) =
   let height = length2 t in
   let width = length t.(0) in
-  let res = simplex t height width in
+  let res = simplex p n_var t height width in
   res

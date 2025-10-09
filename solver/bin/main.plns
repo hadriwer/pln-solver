@@ -1,4 +1,8 @@
-OBJ MIN Z = 2x + 3y
+OBJ 
+    min z = 3x + 4y
 CONS
-x + y >= 10
-2x + y >= 15
+    x + y >= 9
+    x - y <= 9
+    x + 3y >= 18
+    x >= 3
+    y <= 10

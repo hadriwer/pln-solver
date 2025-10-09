@@ -14,8 +14,8 @@ let () =
 
   try
     let tree = Parser.main Lexer.token lexbuf in
-    let (var, tab, _) = make_simplex_table tree in
-    let res = solve_simplex tab in
+    let (var, tab, p, n_var) = make_simplex_table tree in
+    let res = solve_simplex p n_var tab in
     (* print_ast tree; *)
     Printf.printf "Simplex gives %s = %f\n" var res;
   with

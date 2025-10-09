@@ -136,15 +136,32 @@ let cnt_number_constr t =
     OBJ (_, _, c) ->
       let res = aux c in
       if res = 0 then failwith "No constraint" else res
-    ;;
+;;
+
+(* Count artificial var if we get ">=" *)
+let cnt_number_artificial t = 
+  let aux_expr = function
+    | EXPR (_, COMP_GE, _) -> 1
+    | _ -> 0
+  in
+  let rec aux_constr = function
+      NOP -> 0
+    | CONSTR (e, c) -> aux_expr e + aux_constr c
+  in
+  match t with
+    OBJ (_, _, c) -> aux_constr c
+;;
+
     
 let make_simplex_table tree  =
   (*===================================================================*)
   (* Var to optimize and number variables int the problems *)
   let (var_opti, n_var) = cnt_number_variable tree in
+  let n_artificial = cnt_number_artificial tree in
   (* Number of constraints in the problem *)
   let n_cons = cnt_number_constr tree in
-  Printf.printf "Var to optimize = %s, Number var = %d, Number of contraint = %d\n" var_opti n_var n_cons;
+  Printf.printf "Var to optimize = %s, Number var = %d, Number of contraint = %d Number of artificial var = %d\n" 
+                  var_opti n_var n_cons n_artificial;
 
   (*===================================================================*)
   (* Create a Hashtbl to store var *)
@@ -164,7 +181,7 @@ let make_simplex_table tree  =
   in
 
   (*===================================================================*)
-  let n_cols = 2 * (n_var - 1) + 1 in
+  let n_cols = n_var + n_cons + n_artificial in
   let table = Array.make_matrix (n_cons + 1) (n_cols) 0. in
 
   let rec fill_tbl = function
@@ -184,12 +201,17 @@ let make_simplex_table tree  =
         (
           let idx = get_idx x in
           table.(row).(idx) <- a;
-          
-          )
+        )
       | BINOP (_, e1, e2) -> (fill_expr row e1; fill_expr row e2) 
-      | EXPR (e1, _, INT(i))
-      | EXPR (INT(i), _, e1) ->
+      | EXPR (e1, c, INT(i))
+      | EXPR (INT(i), c, e1) ->
         (
+          let i =
+            match c with
+                COMP_LE -> i
+              | COMP_GE -> -. i
+              | _ -> failwith "error make_simplex_table : comparaison not supported yet."
+          in
           table.(row).(n_cols - 1) <- i;
           fill_expr row e1;
         )
@@ -204,15 +226,32 @@ let make_simplex_table tree  =
       | CONSTR (e, c1) -> fill_expr row e; fill_constr (row+1) c1
   in
   match tree with
-    OBJ (_, e, c) -> (
+    OBJ (optimum, e, c) -> (
+      let predicat =
+          match optimum with
+          | MAX -> (fun l -> Array.exists (fun e -> e < -.1e-10) l)
+          | MIN -> (fun l -> Array.exists (fun e -> e > 1e-10) l)
+      in
       fill_tbl e;
       fill_expr n_cons e;
       fill_constr 0 c;
-      (* Set the identity matrix *)
-      let nb_var_mat = n_var - 1 in
-      for i = 0 to  nb_var_mat - 1 do
-        table.(i).(i + nb_var_mat) <- 1.;
+      (* Set the identity matrix and artificial var *)
+      let idx = ref 0 in
+      for i = 0 to  n_cons - 1 do
+        let r_side = table.(i).(n_cols-1) in
+        let signe =
+          if r_side < 0. 
+          then
+            (
+              table.(i).(n_var - 1 + n_cons + !idx) <- 1.;
+              idx := !idx + 1;
+              table.(i).(n_cols-1) <- r_side *. -1.; 
+              -1.
+            ) 
+          else 1. 
+        in
+        table.(i).(i + n_var - 1) <- signe;
       done;
-      (var_opti, table, tbl)
+      (var_opti, table, predicat, n_var)
     )
 ;;
