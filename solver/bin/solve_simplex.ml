@@ -54,6 +54,7 @@ let print_mat m =
 let find_arg_coeff_pivot n_var (t : float array array) height width =
   let objective_line = t.(height-1) in
   let col = arg_extreme (fun a b -> a > b) (Array.sub objective_line 0 n_var) in
+  Printf.printf "col = %d\n" col;
   let rec aux i best_i best_val =
     if i >= height - 1 then best_i
     else
@@ -77,9 +78,10 @@ let find_arg_coeff_pivot n_var (t : float array array) height width =
     @return solve the pln problem
 **)
 let rec simplex (p : float array -> bool) n_var tab height width =
-  let objective_line_without_last = Array.sub tab.(height-1) 0 (n_var-1) in
+  let objective_line_without_unused_var = Array.sub tab.(height-1) 0 (n_var-1) in
+  Printf.printf "true var = "; print_mat [|objective_line_without_unused_var|];
   print_mat tab;
-  let tf = p objective_line_without_last in
+  let tf = p objective_line_without_unused_var in
   if not tf
     then (tab.(height-1).(width-1))
   else
@@ -96,13 +98,32 @@ let rec simplex (p : float array -> bool) n_var tab height width =
     in
     simplex p n_var res height width
 
+  
+let solve_phase1 tab p =
+  let height = length2 tab in
+  let width = length tab.(0) in
+  Printf.printf "---- 1st Phases ---- \n";
+  let res = simplex p width tab height width in
+  if abs_float res > 1e-8
+  then failwith "No solutions";
+  tab
+;;
+
+let solve_phase2 tableau n_var p =
+  let height = length2 tableau in
+  let width = length tableau.(0) in
+  Printf.printf "--- PHASE 2 ---\n";
+  let z = simplex p n_var tableau height width in
+  z
+;;
 
 (**
     Function that launch the simplex
     @param t matrix of constraints and objective
 **)
-let solve_simplex p n_var (t : float array array) =
-  let height = length2 t in
-  let width = length t.(0) in
-  let res = simplex p n_var t height width in
-  res
+let solve_simplex p n_var n_artificial (t : float array array) =
+  let t1 =
+    if n_artificial > 0 then solve_phase1 t p
+    else t 
+  in
+  solve_phase2 t1 n_var p

@@ -229,8 +229,8 @@ let make_simplex_table tree  =
     OBJ (optimum, e, c) -> (
       let predicat =
           match optimum with
-          | MAX -> (fun l -> Array.exists (fun e -> e < -.1e-10) l)
-          | MIN -> (fun l -> Array.exists (fun e -> e > 1e-10) l)
+          | MAX -> (fun l -> Array.exists (fun e -> e > 1e-10) l) (* TODO *)
+          | MIN -> (fun l -> Array.exists (fun e -> e > 1e-10) l) (* TODO *)
       in
       fill_tbl e;
       fill_expr n_cons e;
@@ -244,6 +244,7 @@ let make_simplex_table tree  =
           then
             (
               table.(i).(n_var - 1 + n_cons + !idx) <- 1.;
+              table.(n_cons).(n_var - 1 + n_cons + !idx) <- 1.;
               idx := !idx + 1;
               table.(i).(n_cols-1) <- r_side *. -1.; 
               -1.
@@ -252,6 +253,6 @@ let make_simplex_table tree  =
         in
         table.(i).(i + n_var - 1) <- signe;
       done;
-      (var_opti, table, predicat, n_var)
+      (var_opti, table, predicat, n_var, n_artificial)
     )
 ;;
