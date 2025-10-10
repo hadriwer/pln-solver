@@ -29,9 +29,18 @@ section constraints with "Cons"
 
 ## Compile
 
+To compile you just have to use the command below.
+
 ```
 dune build
 dune exec ./bin/main.exe <input_file>
+```
+
+## Dependencies
+
+```
+name                   lp-glpk
+all-installed-versions 0.5.0 [default]
 ```
 
 ## Authors
