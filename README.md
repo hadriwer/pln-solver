@@ -1,6 +1,6 @@
 # PLN-SOLVER
 
-This is a mini-language based on **Ocaml** to solve linear programming problems. The language is very simple.
+This is a mini-language based on **Ocaml** to solve linear programming problems. The language is very simple. Using the lib lp-glpk for the simplex algorithm.
 
 ## Syntax
 
@@ -26,6 +26,19 @@ section constraints with "Cons"
 ....- **[int] <= [expression]**  
 .... and so on
 
+Other example :
+
+```
+OBJ
+    min z = 3x + 4y
+CONS
+    x + y >= 9
+    x - y <= 9
+    x + 3y >= 18
+    x >= 3
+    y <= 10
+```
+
 
 ## Compile
 
@@ -39,8 +52,11 @@ dune exec ./bin/main.exe <input_file>
 ## Dependencies
 
 ```
-name                   lp-glpk
-all-installed-versions 0.5.0 [default]
+name                            lp-glpk
+all-installed-versions          0.5.0 [default]
+
+name                            menhir
+versions                        3.0
 ```
 
 ## Authors
