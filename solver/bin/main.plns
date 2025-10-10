@@ -1,6 +1,8 @@
 OBJ 
-    max z = 8x + 5y + 6z
+    min z = 3x + 4y
 CONS
-    2x + 3y + 2z <= 90
-    x + 2y + z <= 81
-    4x + 3y + z <= 120
+    x + y >= 9
+    x - y <= 9
+    x + 3y >= 18
+    x >= 3
+    y <= 10

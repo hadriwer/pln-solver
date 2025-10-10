@@ -152,107 +152,55 @@ let cnt_number_artificial t =
     OBJ (_, _, c) -> aux_constr c
 ;;
 
-    
-let make_simplex_table tree  =
-  (*===================================================================*)
-  (* Var to optimize and number variables int the problems *)
-  let (var_opti, n_var) = cnt_number_variable tree in
-  let n_artificial = cnt_number_artificial tree in
-  (* Number of constraints in the problem *)
-  let n_cons = cnt_number_constr tree in
-  Printf.printf "Var to optimize = %s, Number var = %d, Number of contraint = %d Number of artificial var = %d\n" 
-                  var_opti n_var n_cons n_artificial;
 
-  (*===================================================================*)
-  (* Create a Hashtbl to store var *)
-  let tbl = Hashtbl.create n_var in
-  (* Length = number of contraints + 1 (for the objective line) *)
-  let idx = ref 0 in
-  let register_var x =
-    if not (Hashtbl.mem tbl x) then (
-      Hashtbl.add tbl x !idx;
-      incr idx
-    )
+let make_simplex_problem tree =
+  let open Lp in
+  let rec aux_expr = function
+    | INT i -> (c i)
+    | ID x -> Lp.var x
+    | BINOP (OP_ADD, e1, e2) -> (aux_expr e1) ++ (aux_expr e2)
+    | BINOP (OP_MUL, e1, e2) -> (aux_expr e1) *~ (aux_expr e2)
+    | BINOP (OP_SUB, e1, e2) -> (aux_expr e1) ++ (c (-1.) *~ (aux_expr e2))
+    | EXPR (_, COMP_EQ, e) -> aux_expr e
+    | _ -> failwith "error aux_expr : construct ast"
   in
-
-  let get_idx x =
-    if not (Hashtbl.mem tbl x) then failwith "Semantic error : var isn't in the objective"
-    else Hashtbl.find tbl x
-  in
-
-  (*===================================================================*)
-  let n_cols = n_var + n_cons + n_artificial in
-  let table = Array.make_matrix (n_cons + 1) (n_cols) 0. in
-
-  let rec fill_tbl = function
-      | NONE -> ()
-      | INT _ -> ()
-      | ID x -> register_var x;
-      | BINOP (_, e1, e2) -> (fill_tbl e1; fill_tbl e2)
-      | EXPR (_, _, e2) -> 
+  let rec aux_constr = function
+        NOP -> []
+      | CONSTR (e, c) ->
         (
-          fill_tbl e2;
-        )
-  in
-  let rec fill_expr row = function
-      | NONE -> ()
-      | BINOP (_, INT(a), ID(x))
-      | BINOP (_, ID(x), INT(a)) ->
-        (
-          let idx = get_idx x in
-          table.(row).(idx) <- a;
-        )
-      | BINOP (_, e1, e2) -> (fill_expr row e1; fill_expr row e2) 
-      | EXPR (e1, c, INT(i))
-      | EXPR (INT(i), c, e1) ->
-        (
-          let i =
-            match c with
-                COMP_LE -> i
-              | COMP_GE -> -. i
-              | _ -> failwith "error make_simplex_table : comparaison not supported yet."
+          let hd =
+            match e with
+              | EXPR (e1, COMP_GE, e2) -> (aux_expr e1) >~ (aux_expr e2)
+              | EXPR (e1, COMP_LE, e2) -> (aux_expr e1) <~ (aux_expr e2)
+              | _ -> failwith "error aux_constr : construct ast"
           in
-          table.(row).(n_cols - 1) <- i;
-          fill_expr row e1;
+          hd :: aux_constr c
         )
-      | EXPR (_, _, e) ->
-        (
-          fill_expr row e;
-        )
-      | _ -> ()
   in
-  let rec fill_constr row = function
-        NOP -> ()
-      | CONSTR (e, c1) -> fill_expr row e; fill_constr (row+1) c1
+  let aux_opti = function
+      MIN -> minimize
+    | MAX -> maximize
+  in
+  let rec aux_var_index = function
+    | ID x -> [(x, Lp.var x)]
+    | EXPR (_, COMP_EQ, e2) -> (aux_var_index e2)
+    | BINOP (_, e1, e2)
+    | EXPR (e1, _, e2) -> (aux_var_index e1) @ (aux_var_index e2)
+    | _ -> []
   in
   match tree with
-    OBJ (optimum, e, c) -> (
-      let predicat =
-          match optimum with
-          | MAX -> (fun l -> Array.exists (fun e -> e > 1e-10) l) (* TODO *)
-          | MIN -> (fun l -> Array.exists (fun e -> e > 1e-10) l) (* TODO *)
-      in
-      fill_tbl e;
-      fill_expr n_cons e;
-      fill_constr 0 c;
-      (* Set the identity matrix and artificial var *)
-      let idx = ref 0 in
-      for i = 0 to  n_cons - 1 do
-        let r_side = table.(i).(n_cols-1) in
-        let signe =
-          if r_side < 0. 
-          then
-            (
-              table.(i).(n_var - 1 + n_cons + !idx) <- 1.;
-              table.(n_cons).(n_var - 1 + n_cons + !idx) <- 1.;
-              idx := !idx + 1;
-              table.(i).(n_cols-1) <- r_side *. -1.; 
-              -1.
-            ) 
-          else 1. 
-        in
-        table.(i).(i + n_var - 1) <- signe;
-      done;
-      (var_opti, table, predicat, n_var, n_artificial)
-    )
-;;
+      OBJ (optimum, e, c) -> 
+        (
+          let var_index = aux_var_index e in
+          let problem = 
+            make 
+            ((aux_opti optimum) (aux_expr e))
+            (aux_constr c)
+          in
+          let var_obj =
+            match e with
+                EXPR (ID(t), COMP_EQ, _) -> t
+              | _ -> failwith "error var_obj : ID doesnt exist."
+          in
+          (var_index, problem, var_obj)
+        )
